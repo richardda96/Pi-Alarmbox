@@ -80,12 +80,18 @@ try:
 			if (key == "#"):
 				espeakline = 'espeak "Not generating liquid ambrosia" ' + "2>/dev/null"
 				subprocess.call(espeakline, shell=True) ##Though I don't think I'm supposed to be using shell=True for security reasons.
+				print("now setting the alarm then, no coffee tho")
+				print(timestamp)
+				alarmline = 'sudo python pi-alarm.py' + timestamp
+				subprocess.call(alarmline, shell=True)
 			else:
 				espeakline = 'espeak "May liquid ambrosia descend from the very pinnacle of Mount Olympus and bless thine lips" ' + "2>/dev/null"
 				subprocess.call(espeakline, shell=True) ##Though I don't think I'm supposed to be using shell=True for security reasons.
 				timestamp = timestamp + " -c True"
 				print("now setting the alarm then")
 				print(timestamp)
+				alarmline = 'sudo python pi-alarm.py' + timestamp
+				subprocess.call(alarmline, shell=True)
 		elif(key != "*" and currsetalarm == True):
 			if (modeset == False):
 				if(str(key) == '1'):
