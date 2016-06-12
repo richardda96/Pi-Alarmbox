@@ -68,7 +68,7 @@ try:
 			espeakline = 'espeak "Setting new alarm" ' + "2>/dev/null"
 			subprocess.call(espeakline, shell=True) ##Though I don't think I'm supposed to be using shell=True for security reasons.
 			currsetalarm = True
-			time.sleep(1)
+			#time.sleep(1)
 			espeakline = 'espeak "1 for period mode, 3 for timestamp mode" ' + "2>/dev/null"
 			subprocess.call(espeakline, shell=True) ##Though I don't think I'm supposed to be using shell=True for security reasons.
 			currsetalarm = True
