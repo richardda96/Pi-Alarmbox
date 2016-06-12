@@ -2,7 +2,7 @@ from pad4pi import rpi_gpio
 import time
 
 import subprocess
-
+import os
 ##
 ##Alarm box based on Raspberry Pi
 ##
@@ -32,9 +32,8 @@ ROW_PINS = [7,8,25,24] # BCM numbering
 COL_PINS = [10,9,11] # BCM numbering.
 
 #espeakline = 'espeak " ' + str(24 - (invokehours - hours)) + ' hours ' + str(abs(minutes - invokeminutes)) + ' minutes' + ' " ' + "2>/dev/null"
-
-
-try:
+def pialarmbox():
+	
 	factory = rpi_gpio.KeypadFactory()
 	
 	# Try factory.create_4_by_3_keypad
@@ -56,14 +55,31 @@ try:
 	global modeset
 	modeset = False
 	global timestamp
+	global finished
+	finished = False
+	global FNULL
+	FNULL = open(os.devnull, 'w')
+	
+	os.environ["finished"] = "0"
 	
 	def key_pressed(key):
 		global currsetalarm
 		global finishedstamp
 		global modeset
 		global timestamp
+		global finished
 		
-		if (key == "*" and currsetalarm == False):
+		if(finished == True):
+			print("hold on")
+			espeakline = 'espeak "Additional Alarm Requested" ' + "2>/dev/null"
+			subprocess.call(espeakline, shell=True) ##Though I don't think I'm supposed to be using shell=True for security reasons.
+			#print(1/0)
+			currsetalarm = False
+			finishedstamp =""
+			modeset = False
+			finishedstamp = False
+			finished = False
+		elif (key == "*" and currsetalarm == False):
 			print("adding new alarm?")
 			espeakline = 'espeak "Setting new alarm" ' + "2>/dev/null"
 			subprocess.call(espeakline, shell=True) ##Though I don't think I'm supposed to be using shell=True for security reasons.
@@ -90,7 +106,23 @@ try:
 				while(counter < len(command_split)):
 					command_split[counter] = "-" + str(command_split[counter])
 					counter = counter + 1
-				subprocess.call(["sudo", "python", "pi-alarm.py", command_split[0]], shell=False)
+				#subprocess.call(["sudo", "python", "pi-alarm.py", command_split[0]], shell=False, stdout=FNULL, stderr=FNULL)
+				
+				finished = True
+				#subprocess.call(["sudo", "python", "pi-alarm.py", command_split[0]], shell=False, stdin=None, stdout=None, stderr=None, close_fds=True)
+				subprocess.Popen(["sudo", "python", "pi-alarm.py", command_split[0]], shell=False, stdin=None, stdout=None, stderr=None, close_fds=True)
+				print("now going to loop")
+				#pialarmbox()
+				#return()
+				#finished = True
+				currsetalarm = False
+				finishedstamp =""
+				modeset = False
+				finishedstamp = False
+				finished = False
+				os.environ["finished"] = "1"
+				#print(make_error) ##Oh no! Error!
+				#test = 1/0 ##Really big?
 			else:
 				espeakline = 'espeak "May liquid ambrosia descend from the very pinnacle of Mount Olympus and bless thine lips" ' + "2>/dev/null"
 				subprocess.call(espeakline, shell=True) ##Though I don't think I'm supposed to be using shell=True for security reasons.
@@ -107,8 +139,23 @@ try:
 					command_split[counter] = "-" + str(command_split[counter])
 					counter = counter + 1
 				print(command_split)
-				subprocess.call(["sudo", "python", "pi-alarm.py", command_split[0], command_split[1]], shell=False)
-			
+				#subprocess.call(["sudo", "python", "pi-alarm.py", command_split[0], command_split[1]], shell=False, stdout=FNULL, stderr=FNULL)
+				finished = True
+				#subprocess.call(["sudo", "python", "pi-alarm.py", command_split[0], command_split[1]], shell=False, stdin=None, stdout=None, close_fds=True)
+				subprocess.Popen(["sudo", "python", "pi-alarm.py", command_split[0], command_split[1]], shell=False, stdin=None, stdout=None, close_fds=True)
+				
+				print("now going to loop")
+				#print(make_error) ##Oh noes! Error!
+				#pialarmbox()
+				#return()
+				#finished = True
+				currsetalarm = False
+				finishedstamp =""
+				modeset = False
+				finishedstamp = False
+				finished = False
+				os.environ["finished"] = "1"
+				
 		elif(key != "*" and currsetalarm == True):
 			if (modeset == False):
 				if(str(key) == '1'):
@@ -129,7 +176,10 @@ try:
 			else:
 				espeakline = 'espeak " ' + str(key) + ' " 2>/dev/null'
 				subprocess.call(espeakline, shell=True)
-				timestamp = timestamp + str(key)
+				if((len(timestamp)-4+1) > 5):
+					print("error thing")
+				else:
+					timestamp = timestamp + str(key)
 				#if(len(timestamp) == 2):
 				##
 				##Need to add in the mode strings.
@@ -147,34 +197,18 @@ try:
 					espeakline = 'espeak "Should I make coffee?" ' + "2>/dev/null"
 					subprocess.call(espeakline, shell=True) ##Though I don't think I'm supposed to be using shell=True for security reasons.
 					finishedstamp = True
-	def waitforkeypress():
-		global keypress
-		while True:
-			time.sleep(1)
-			if(keypress != 0):
-				print("got keypress")
-				return(keypress)
 
-# printKey will be called each time a keypad button is pressed
+	
+	# printKey will be called each time a keypad button is pressed
 	keypad.registerKeyPressHandler(key_pressed)
 	while True:
 		time.sleep(1)
-		keypress = 0
+		if(os.environ["finished"] == "1"):
+			print("looping")
+			#espeakline = 'espeak "Additional Alarm Requested" ' + "2>/dev/null"
+			#subprocess.call(espeakline, shell=True) ##Though I don't think I'm supposed to be using shell=True for security reasons.
+			#return
 		#keypress = waitforkeypress()
-		if (keypress == "*"): ##So the user will have to press '*' to set the alarm.
-				keypress = 0
-				#while True:
-				#	time.sleep(1)
-				#	if(keypress != 0):
-				#		print("got another keypress!")
-				
-				firsthour = waitforkeypress()
-				secondhour = waitforkeypress()
-				print("got first set")
-				espeakline = 'espeak " ' + str(firsthour) + str(secondhour)+ ' hours ' + ' " ' + "2>/dev/null"
-				
-				
-except KeyboardInterrupt:
-	print("Goodbye")
-finally:
-	keypad.cleanup()
+		
+while True:
+	pialarmbox()
