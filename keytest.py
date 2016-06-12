@@ -83,7 +83,14 @@ try:
 				print("now setting the alarm then, no coffee tho")
 				print(timestamp)
 				alarmline = 'sudo python pi-alarm.py' + timestamp
-				subprocess.call(alarmline, shell=True)
+				#subprocess.call(alarmline, shell=True)
+				command_split = timestamp.split('-')
+				command_split = command_split[1:]
+				counter = 0
+				while(counter < len(command_split)):
+					command_split[counter] = "-" + str(command_split[counter])
+					counter = counter + 1
+				subprocess.call(["sudo", "python", "pi-alarm.py", command_split[0]], shell=False)
 			else:
 				espeakline = 'espeak "May liquid ambrosia descend from the very pinnacle of Mount Olympus and bless thine lips" ' + "2>/dev/null"
 				subprocess.call(espeakline, shell=True) ##Though I don't think I'm supposed to be using shell=True for security reasons.
@@ -91,7 +98,17 @@ try:
 				print("now setting the alarm then")
 				print(timestamp)
 				alarmline = 'sudo python pi-alarm.py' + timestamp
-				subprocess.call(alarmline, shell=True)
+				#subprocess.call(alarmline, shell=True)
+				command_split = timestamp.split('-')
+				command_split = command_split[1:] ##Skips first space.
+				counter = 0 
+				print(command_split)
+				while(counter < len(command_split)):
+					command_split[counter] = "-" + str(command_split[counter])
+					counter = counter + 1
+				print(command_split)
+				subprocess.call(["sudo", "python", "pi-alarm.py", command_split[0], command_split[1]], shell=False)
+			
 		elif(key != "*" and currsetalarm == True):
 			if (modeset == False):
 				if(str(key) == '1'):
