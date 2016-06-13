@@ -1,8 +1,3 @@
-from pad4pi import rpi_gpio
-import time
-
-import subprocess
-import os
 ##
 ##Alarm box based on Raspberry Pi
 ##
@@ -18,6 +13,13 @@ import os
 ##
 ##
 
+from pad4pi import rpi_gpio
+import time
+
+import subprocess
+import os
+import signal
+
 KEYPAD = [
         [1,2,3],
         [4,5,6],
@@ -32,7 +34,9 @@ ROW_PINS = [7,8,25,24] # BCM numbering
 COL_PINS = [10,9,11] # BCM numbering.
 
 #espeakline = 'espeak " ' + str(24 - (invokehours - hours)) + ' hours ' + str(abs(minutes - invokeminutes)) + ' minutes' + ' " ' + "2>/dev/null"
-def pialarmbox():
+#def pialarmbox():
+
+try:
 	
 	factory = rpi_gpio.KeypadFactory()
 	
@@ -57,10 +61,15 @@ def pialarmbox():
 	global timestamp
 	global finished
 	finished = False
-	global FNULL
-	FNULL = open(os.devnull, 'w')
+	#global FNULL
+	#FNULL = open(os.devnull, 'w')
 	
-	os.environ["finished"] = "0"
+	global popen_list
+	popen_list = list()
+	global popen_counter
+	popen_counter = 0
+	
+	#os.environ["finished"] = "0"
 	
 	def key_pressed(key):
 		global currsetalarm
@@ -68,6 +77,9 @@ def pialarmbox():
 		global modeset
 		global timestamp
 		global finished
+		
+		global popen_list
+		global popen_counter
 		
 		if(finished == True):
 			print("hold on")
@@ -110,7 +122,9 @@ def pialarmbox():
 				
 				finished = True
 				#subprocess.call(["sudo", "python", "pi-alarm.py", command_split[0]], shell=False, stdin=None, stdout=None, stderr=None, close_fds=True)
-				subprocess.Popen(["sudo", "python", "pi-alarm.py", command_split[0]], shell=False, stdin=None, stdout=None, stderr=None, close_fds=True)
+				#popen_list[popen_counter] = subprocess.Popen(["sudo", "python", "pi-alarm.py", command_split[0]], shell=False, stdin=None, stdout=None, stderr=None, close_fds=True)
+				popen_list.append(subprocess.Popen(["sudo", "python", "pi-alarm.py", command_split[0]], shell=False, stdout=subprocess.PIPE, preexec_fn=os.setsid, close_fds = True))
+				popen_counter = popen_counter + 1 ##Next process.
 				print("now going to loop")
 				#pialarmbox()
 				#return()
@@ -119,12 +133,12 @@ def pialarmbox():
 				finishedstamp =""
 				modeset = False
 				finishedstamp = False
-				finished = False
-				os.environ["finished"] = "1"
+				#os.environ["finished"] = "1"
 				#print(make_error) ##Oh no! Error!
 				#test = 1/0 ##Really big?
 			else:
-				espeakline = 'espeak "May liquid ambrosia descend from the very pinnacle of Mount Olympus and bless thine lips" ' + "2>/dev/null"
+				#espeakline = 'espeak "May liquid ambrosia descend from the very pinnacle of Mount Olympus and bless thine lips" ' + "2>/dev/null"
+				espeakline = 'espeak "May liquid ambrosia descend from the very pinnacle of Mount Olympus" ' + "2>/dev/null"
 				subprocess.call(espeakline, shell=True) ##Though I don't think I'm supposed to be using shell=True for security reasons.
 				timestamp = timestamp + " -c True"
 				print("now setting the alarm then")
@@ -142,8 +156,9 @@ def pialarmbox():
 				#subprocess.call(["sudo", "python", "pi-alarm.py", command_split[0], command_split[1]], shell=False, stdout=FNULL, stderr=FNULL)
 				finished = True
 				#subprocess.call(["sudo", "python", "pi-alarm.py", command_split[0], command_split[1]], shell=False, stdin=None, stdout=None, close_fds=True)
-				subprocess.Popen(["sudo", "python", "pi-alarm.py", command_split[0], command_split[1]], shell=False, stdin=None, stdout=None, close_fds=True)
-				
+				#popen_list[popen_counter] = subprocess.Popen(["sudo", "python", "pi-alarm.py", command_split[0], command_split[1]], shell=False, stdin=None, stdout=None, close_fds=True)
+				popen_list.append(subprocess.Popen(["sudo", "python", "pi-alarm.py", command_split[0], command_split[1]], shell=False, stdout=subprocess.PIPE, preexec_fn=os.setsid, close_fds=True))
+				popen_counter = popen_counter + 1 ##Next process.
 				print("now going to loop")
 				#print(make_error) ##Oh noes! Error!
 				#pialarmbox()
@@ -154,7 +169,7 @@ def pialarmbox():
 				modeset = False
 				finishedstamp = False
 				finished = False
-				os.environ["finished"] = "1"
+				#os.environ["finished"] = "1"
 				
 		elif(key != "*" and currsetalarm == True):
 			if (modeset == False):
@@ -203,12 +218,22 @@ def pialarmbox():
 	keypad.registerKeyPressHandler(key_pressed)
 	while True:
 		time.sleep(1)
-		if(os.environ["finished"] == "1"):
-			print("looping")
+		#if(os.environ["finished"] == "1"):
+		#	print("looping")
 			#espeakline = 'espeak "Additional Alarm Requested" ' + "2>/dev/null"
 			#subprocess.call(espeakline, shell=True) ##Though I don't think I'm supposed to be using shell=True for security reasons.
 			#return
 		#keypress = waitforkeypress()
-		
-while True:
-	pialarmbox()
+except KeyboardInterrupt:
+	print("Closing all alarms")
+	for process in popen_list:
+		print("killing this thread")
+		print(process.pid)
+	#	process.terminate() ##Hopefully kills all the alarms.
+		os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+		##That doesn't work.
+		kill_line = "kill -9 " + str(process.pid)
+		subprocess.call(kill_line, shell=True)
+		print("should have been killed?")
+finally:
+	keypad.cleanup()
